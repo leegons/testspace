@@ -13,7 +13,7 @@ DRT_LEFT = 1
 DRT_RIGHT = -1
 DRT_UP = 2
 DRT_DOWN = -2
-CHAR_FOOD = '.'
+CHAR_FOOD = '@'
 CHAR_BODY = 'X'
 CHAR_HEAD = 'O'
 Snack_ALIVE = 1
@@ -30,6 +30,10 @@ class ScreenController(object):
         curses.noecho()
         curses.cbreak()
         curses.curs_set(0)
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
         return scr
 
     def _del(self):
@@ -62,19 +66,22 @@ class Screenmaps(object):
             return self.maps["%d_%d" %(y, x)]
 
     def show(self, scr):
+        max_y, max_x = scr.getmaxyx()
         scr.clear()
         for s in self.maps:
             v = self.maps[s]
             y, x = s.split('_')
             y, x = int(y), int(x)
+            if max_y-1 == y and max_x == x+1:
+                continue
             if v == BODY:
-                scr.addstr(y, x, CHAR_BODY)
+                scr.addch(y, x, CHAR_BODY, curses.color_pair(2))
             elif v == HEAD:
-                scr.addstr(y, x, CHAR_HEAD, curses.A_ATTRIBUTES)
+                scr.addch(y, x, CHAR_HEAD, curses.color_pair(1))
             elif v == FOOD:
-                scr.addstr(y, x, CHAR_FOOD)
+                scr.addch(y, x, CHAR_FOOD, curses.color_pair(3))
             else:
-                scr.addstr(y, x, v)
+                scr.addstr(y, x, v, curses.color_pair(2))
         scr.refresh()
 
 class Snack(object):
@@ -93,6 +100,9 @@ class Snack(object):
 
     def setdead(self):
         self.isdead = True
+
+    def score(self):
+        return len(self._bodys)
 
     def forward(self, maps):
         if self.isdead:
@@ -201,6 +211,13 @@ def moved(scr, snack):
         log_exception(str(e))
 
 if __name__ == "__main__":
+    print 'use A W S D to move, X to exit'
+    for t in [5, 4, 3]:
+        print '%d' % t
+        time.sleep(1)
+    print '1 :)'
+    time.sleep(0.3)
+
     sc = ScreenController()
     scr = sc._init()
     snack = Snack(scr)
@@ -218,5 +235,6 @@ if __name__ == "__main__":
 
     except Exception as e:
         log_exception(str(e))
-
     sc._del()
+
+    print 'GAME OVER, you got %d chars' % snack.score()

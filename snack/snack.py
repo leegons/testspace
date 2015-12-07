@@ -2,62 +2,48 @@ import curses
 import time
 import threading
 import random
+import sys
+import string
 
-# define
+# system define
 FOOD = 3
 BODY = 2
 HEAD = 1
-
 DRT_LEFT = 1
-DRT_RIGHT = 2
-DRT_UP = 3
-DRT_DOWN = 4
-
+DRT_RIGHT = -1
+DRT_UP = 2
+DRT_DOWN = -2
 CHAR_FOOD = '.'
 CHAR_BODY = 'X'
 CHAR_HEAD = 'O'
+Snack_ALIVE = 1
+Snack_GROW = 2
+Snack_DEAD = 3
 
-SNK_ALIVE = 1
-SNK_GROW = 2
-SNK_DEAD = 3
-
-# config
+MV_PER_S = 0.08
+MV_PER_GROW = 0.92
 SNACK_START_POS = (1,1)
 
-class mctrl(object):
-    def __init__(self):
-        print '__init__'
-
+class ScreenController(object):
     def _init(self):
         scr = curses.initscr()
         curses.noecho()
         curses.cbreak()
+        curses.curs_set(0)
         return scr
 
     def _del(self):
+        curses.curs_set(1)
         curses.echo()
         curses.nocbreak()
         curses.endwin()
 
-# lock test
-mutex = threading.Lock()
-if mutex.acquire(1):
-    print 'got lock'
-    mutex.release()
+def log_exception(e):
+    f = open('exception.log', 'a')
+    f.write(e + '\n')
+    f.close()
 
-# threading test
-def testthread(a, b):
-    print 'test:%d,%d' % (a, b)
-t = threading.Thread(target=testthread, args=(1,1))
-t.setDaemon(True)
-t.start()
-t.join()
-
-# getch test
-#int curses.getch()
-#int() & chr()
-
-class nkmaps(object):
+class Screenmaps(object):
     def __init__(self):
         self.clear()
 
@@ -84,12 +70,14 @@ class nkmaps(object):
             if v == BODY:
                 scr.addstr(y, x, CHAR_BODY)
             elif v == HEAD:
-                scr.addstr(y, x, CHAR_HEAD)
+                scr.addstr(y, x, CHAR_HEAD, curses.A_ATTRIBUTES)
             elif v == FOOD:
                 scr.addstr(y, x, CHAR_FOOD)
+            else:
+                scr.addstr(y, x, v)
         scr.refresh()
 
-class snk(object):
+class Snack(object):
 
     def __init__(self, scr):
         self.scr = scr
@@ -97,22 +85,27 @@ class snk(object):
         self._bodys = []
         self._bodys.append(SNACK_START_POS)
         self.isdead = False
+        self.last_drt = DRT_RIGHT
 
     def setd(self, d):
-        self._direct = d
+        if d + self.last_drt != 0:
+            self._direct = d
 
     def setdead(self):
         self.isdead = True
 
     def forward(self, maps):
         if self.isdead:
-            return SNK_DEAD
+            return Snack_DEAD
         max_y, max_x = self.scr.getmaxyx()
+        max_x -= 1
+        max_y -= 1
 
         y, x = self._bodys[0]
         if len(self._bodys) > 1:
-            maps.set(y, x, BODY)
+            maps.set(y, x, random.choice(list(string.ascii_letters)))
 
+        self.last_drt = self._direct
         if self._direct == DRT_LEFT:
             x -= 1
             if x < 0:
@@ -135,7 +128,7 @@ class snk(object):
         if road == FOOD:
             grow = True
         elif road == BODY:
-            return SNK_DEAD
+            return Snack_DEAD
 
         if not grow:
             ty, tx = self._bodys.pop()
@@ -144,19 +137,16 @@ class snk(object):
         self._bodys.insert(0, (y, x))
         maps.set(y, x, HEAD)
 
-        if grow:
-            return SNK_GROW
-        else:
-            return SNK_ALIVE
+        return Snack_GROW if grow else Snack_ALIVE
 
-class nkfood(object):
+class Food(object):
     def __init__(self, scr):
         self.scr = scr
 
     def getrand(self):
         max_y, max_x = self.scr.getmaxyx()
-        y = random.randint(0, max_y)
-        x = random.randint(0, max_x)
+        y = random.randint(0, max_y-1)
+        x = random.randint(0, max_x-1)
         return y, x
 
     def getpos(self, maps):
@@ -171,59 +161,62 @@ class nkfood(object):
         return y, x
 
 def command(scr, snack):
-    while True:
-        c = scr.getch()
-        if chr(c) == 'a':
-            CHAR_HEAD = 'a'
-            snack.setd(DRT_LEFT)
-        elif c == int('d'):
-            CHAR_HEAD = 'd'
-            snack.setd(DRT_RIGHT)
-        elif c == int('w'):
-            CHAR_HEAD = 'w'
-            snack.setd(DRT_UP)
-        elif c == int('s'):
-            CHAR_HEAD = 's'
-            snack.setd(DRT_DOWN)
-        # detect exit key
+    try:
+        while True:
+            c = chr(scr.getch())
+            if c == 'a':
+                snack.setd(DRT_LEFT)
+            elif c == 'd':
+                snack.setd(DRT_RIGHT)
+            elif c == 'w':
+                snack.setd(DRT_UP)
+            elif c == 's':
+                snack.setd(DRT_DOWN)
+            elif c == 'x':
+                snack.setdead()
+                break
+            # detect exit key
+    except Exception as e:
+        log_exception(str(e))
 
 def moved(scr, snack):
-    maps = nkmaps()
-    snack.forward(maps)
-    food = nkfood(scr)
-    food.getpos(maps)
-    while True:
-        status = snack.forward(maps)
-        if status == SNK_DEAD:
-            break
-        elif status == SNK_GROW:
-            if food.getpos(maps) is None:
+    try:
+        slp = MV_PER_S
+        maps = Screenmaps()
+        snack.forward(maps)
+        food = Food(scr)
+        food.getpos(maps)
+        while True:
+            status = snack.forward(maps)
+            if status == Snack_DEAD:
                 break
-        maps.show(scr)
-        time.sleep(0.1)
+            elif status == Snack_GROW:
+                if food.getpos(maps) is None:
+                    break
+                slp *= MV_PER_GROW
+            maps.show(scr)
+            time.sleep(slp)
 
-# main
+    except Exception as e:
+        log_exception(str(e))
+
 if __name__ == "__main__":
-    mc = mctrl()
-    scr = mc._init()
-    snack = snk(scr)
+    sc = ScreenController()
+    scr = sc._init()
+    snack = Snack(scr)
 
-    #try:
-    t1 = threading.Thread(target=command, args=(scr, snack))
-    t1.setDaemon(True)
-    t1.start()
+    try:
+        t1 = threading.Thread(target=command, args=(scr, snack))
+        t1.setDaemon(True)
+        t2 = threading.Thread(target=moved, args=(scr, snack))
+        t2.setDaemon(True)
 
-    t2 = threading.Thread(target=moved, args=(scr, snack))
-    t2.setDaemon(True)
-    t2.start()
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
 
-    t1.join()
-    t2.join()
+    except Exception as e:
+        log_exception(str(e))
 
-    #except Exception as e:
-    #    print e
-
-    scr.refresh()
-    time.sleep(3)
-
-    mc._del()
+    sc._del()

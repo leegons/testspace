@@ -16,13 +16,13 @@ DRT_DOWN = -2
 CHAR_FOOD = '@'
 CHAR_BODY = 'X'
 CHAR_HEAD = 'O'
-Snack_ALIVE = 1
-Snack_GROW = 2
-Snack_DEAD = 3
+Snake_ALIVE = 1
+Snake_GROW = 2
+Snake_DEAD = 3
 
 MV_PER_S = 0.08
 MV_PER_GROW = 0.92
-SNACK_START_POS = (1,1)
+snake_START_POS = (1,1)
 
 class ScreenController(object):
     def _init(self):
@@ -84,13 +84,13 @@ class Screenmaps(object):
                 scr.addstr(y, x, v, curses.color_pair(2))
         scr.refresh()
 
-class Snack(object):
+class Snake(object):
 
     def __init__(self, scr):
         self.scr = scr
         self._direct = DRT_RIGHT
         self._bodys = []
-        self._bodys.append(SNACK_START_POS)
+        self._bodys.append(snake_START_POS)
         self.isdead = False
         self.last_drt = DRT_RIGHT
 
@@ -106,7 +106,7 @@ class Snack(object):
 
     def forward(self, maps):
         if self.isdead:
-            return Snack_DEAD
+            return Snake_DEAD
         max_y, max_x = self.scr.getmaxyx()
         max_x -= 1
         max_y -= 1
@@ -138,7 +138,7 @@ class Snack(object):
         if road == FOOD:
             grow = True
         elif road == BODY:
-            return Snack_DEAD
+            return Snake_DEAD
 
         if not grow:
             ty, tx = self._bodys.pop()
@@ -147,7 +147,7 @@ class Snack(object):
         self._bodys.insert(0, (y, x))
         maps.set(y, x, HEAD)
 
-        return Snack_GROW if grow else Snack_ALIVE
+        return Snake_GROW if grow else Snake_ALIVE
 
 class Food(object):
     def __init__(self, scr):
@@ -170,37 +170,37 @@ class Food(object):
         maps.set(y, x, FOOD)
         return y, x
 
-def command(scr, snack):
+def command(scr, snake):
     try:
         while True:
             c = chr(scr.getch())
             if c == 'a':
-                snack.setd(DRT_LEFT)
+                snake.setd(DRT_LEFT)
             elif c == 'd':
-                snack.setd(DRT_RIGHT)
+                snake.setd(DRT_RIGHT)
             elif c == 'w':
-                snack.setd(DRT_UP)
+                snake.setd(DRT_UP)
             elif c == 's':
-                snack.setd(DRT_DOWN)
+                snake.setd(DRT_DOWN)
             elif c == 'x':
-                snack.setdead()
+                snake.setdead()
                 break
             # detect exit key
     except Exception as e:
         log_exception(str(e))
 
-def moved(scr, snack):
+def moved(scr, snake):
     try:
         slp = MV_PER_S
         maps = Screenmaps()
-        snack.forward(maps)
+        snake.forward(maps)
         food = Food(scr)
         food.getpos(maps)
         while True:
-            status = snack.forward(maps)
-            if status == Snack_DEAD:
+            status = snake.forward(maps)
+            if status == Snake_DEAD:
                 break
-            elif status == Snack_GROW:
+            elif status == Snake_GROW:
                 if food.getpos(maps) is None:
                     break
                 slp *= MV_PER_GROW
@@ -220,12 +220,12 @@ if __name__ == "__main__":
 
     sc = ScreenController()
     scr = sc._init()
-    snack = Snack(scr)
+    snake = Snake(scr)
 
     try:
-        t1 = threading.Thread(target=command, args=(scr, snack))
+        t1 = threading.Thread(target=command, args=(scr, snake))
         t1.setDaemon(True)
-        t2 = threading.Thread(target=moved, args=(scr, snack))
+        t2 = threading.Thread(target=moved, args=(scr, snake))
         t2.setDaemon(True)
 
         t1.start()
@@ -237,4 +237,4 @@ if __name__ == "__main__":
         log_exception(str(e))
     sc._del()
 
-    print 'GAME OVER, you got %d chars' % snack.score()
+    print 'GAME OVER, you got %d chars' % snake.score()

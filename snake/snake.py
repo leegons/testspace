@@ -93,10 +93,13 @@ class Snake(object):
         self._bodys.append(snake_START_POS)
         self.isdead = False
         self.last_drt = DRT_RIGHT
+        self._rand_mod = False
+        self._expire_sed = 100
 
     def setd(self, d):
         if d + self.last_drt != 0:
             self._direct = d
+            self._expire_sed = 300
 
     def setdead(self):
         self.isdead = True
@@ -107,13 +110,21 @@ class Snake(object):
     def forward(self, maps):
         if self.isdead:
             return Snake_DEAD
+
         max_y, max_x = self.scr.getmaxyx()
-        max_x -= 1
-        max_y -= 1
+        max_y, max_x = max_y-1, max_x-1
 
         y, x = self._bodys[0]
         if len(self._bodys) > 1:
             maps.set(y, x, random.choice(list(string.ascii_letters)))
+
+        self._expire_sed -= 1
+        if self._expire_sed <= 0:
+            self._expire_sed = random.randint(1, random.randint(1, 50))
+            if self.last_drt in [DRT_LEFT, DRT_RIGHT]:
+                self._direct = random.choice([DRT_UP, DRT_DOWN])
+            else:
+                self._direct = random.choice([DRT_LEFT, DRT_RIGHT])
 
         self.last_drt = self._direct
         if self._direct == DRT_LEFT:

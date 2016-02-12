@@ -1,0 +1,1 @@
+[10-Feb-2016 12:04:58 Asia/Chongqing] PHP Warning:  fprintf() expects parameter 1 to be resource, integer given in /home/saii/code/lgn/lib/common/test.php on line 12

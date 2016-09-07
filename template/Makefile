@@ -1,2 +1,8 @@
-test: test.cc
-	g++ -std=c++11 test.cc -o test
+SRCS := $(wildcard *.cc)
+BINS := $(patsubst %.cc, %, ${SRCS})
+
+.PHONY: all
+all: $(BINS)
+
+%: %.cc
+	g++ -g -std=c++11 $@.cc -o $@

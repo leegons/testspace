@@ -17,7 +17,7 @@ if __name__ == "__main__":
     controller.SetTimeout(300)
     
     request = echo_service_pb2.EchoRequest()
-    request.message = 'hello (from lijian7)'
+    request.message = 'hello (from lijian)'
 
     try:
         response = service.Echo(controller, request)

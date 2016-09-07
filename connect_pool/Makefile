@@ -5,4 +5,4 @@ BINS := $(patsubst %.cc, %, ${SRCS})
 all: $(BINS)
 
 %: %.cc
-	g++ -g -std=c++11 $@.cc -o $@
+	g++ -g -lpthread -std=c++11 $@.cc -o $@

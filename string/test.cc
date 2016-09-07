@@ -42,10 +42,22 @@ void test_substr() {
     puts(t.c_str());
 }
 
+void test_unsigned_char() {
+    std::string str = std::string(1, (unsigned char)0x40);
+    printf("test=0x%x\n", str[0]);
+}
+
+void test_size_of() {
+    std::string str="1234567";
+    printf("sizeof(str):%u\n", sizeof(str));
+}
+
 int main() {
     //test_find();
     //test_assgin();
-    test_substr();
+    //test_substr();
+    //test_unsigned_char();
+    test_size_of();
     return 0;
 }
 

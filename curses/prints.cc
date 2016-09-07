@@ -8,7 +8,7 @@ int main() {
     noecho();
 
     char *map = " abcdefghijklmnopqrstuvwxyz,0123456789().!@#$%^&*-=\\_+|`~[]{};'\":,./<>?";
-    char *str = "hello lijian7, you are good people!";
+    char *str = "hello lijian, you are good people!";
     int x = 10, y = 10;
     move(x, y);
 

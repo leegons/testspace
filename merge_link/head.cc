@@ -39,6 +39,10 @@ void debug_tree(const TreeNode* root, const std::string prefix) {
         return;
     }
     printf("%s =[%d]\n", prefix.c_str(), root->val);
+    if (root->left == nullptr && root->right == nullptr) {
+        // 觉得这个if有问题可以改下试试
+        return;
+    }
     debug_tree(root->left, prefix+"   ");
     debug_tree(root->right, prefix+"   ");
 }

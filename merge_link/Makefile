@@ -1,5 +1,5 @@
-LIBS=head.o sort.o
-TARGET=link_test tree_test
+LIBS=head.o sort.o traversal.o
+TARGET=link_test tree_test traversal_test
 
 .PHONY: output clean
 output: $(LIBS) $(TARGET)
